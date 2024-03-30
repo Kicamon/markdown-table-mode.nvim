@@ -25,13 +25,11 @@ local function markdon_table_cells_width_get(table_contents)
     table.insert(width, 0)
   end
   for i = 1, #table_contents, 1 do
-    if i == 2 then
-      goto continue
+    if i ~= 2 then
+      for _, cell in ipairs(table_contents[i]) do
+        width[_] = math.max(width[_], vim.fn.strdisplaywidth(cell))
+      end
     end
-    for _, cell in ipairs(table_contents[i]) do
-      width[_] = math.max(width[_], vim.fn.strdisplaywidth(cell))
-    end
-    ::continue::
   end
   return width
 end
@@ -71,6 +69,18 @@ local function cells_to_table(table_contents)
   return table_contents
 end
 
+local function judge_markdown_table(table_contents)
+  if #table_contents < 2 then
+    return false
+  end
+  for i = 2, #table_contents, 1 do
+    if #table_contents[i - 1] ~= #table_contents[i] then
+      return false
+    end
+  end
+  return true
+end
+
 local function markdown_table_format()
   if not check_markdonw_table() then
     return
@@ -89,11 +99,13 @@ local function markdown_table_format()
     table.insert(table_contents, table_cells)
   end
 
-  local width = markdon_table_cells_width_get(table_contents)
-  table_contents = update_cell_contents(table_contents, width)
-  table_contents = cells_to_table(table_contents)
+  if judge_markdown_table(table_contents) then
+    local width = markdon_table_cells_width_get(table_contents)
+    table_contents = update_cell_contents(table_contents, width)
+    table_contents = cells_to_table(table_contents)
 
-  vim.api.nvim_buf_set_lines(0, table_start_line - 1, table_end_line, true, table_contents)
+    vim.api.nvim_buf_set_lines(0, table_start_line - 1, table_end_line, true, table_contents)
+  end
 end
 
 vim.api.nvim_create_autocmd('InsertLeave', {
