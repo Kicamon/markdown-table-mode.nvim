@@ -27,7 +27,7 @@ local function markdon_table_cells_width_get(table_contents)
   for i = 1, #table_contents, 1 do
     if i ~= 2 then
       for _, cell in ipairs(table_contents[i]) do
-        width[_] = math.max(width[_], vim.fn.strdisplaywidth(cell))
+        width[_] = math.max(width[_], cell and vim.fn.strdisplaywidth(cell) or 0)
       end
     end
   end
@@ -58,27 +58,15 @@ local function update_cell_contents(table_contents, width)
 end
 
 local function cells_to_table(table_contents)
-  local corner_char, corner_number = '|', #table_contents[1]
+  local corner_char = '|'
   for i = 1, #table_contents, 1 do
     local line = corner_char
-    for j = 1, corner_number, 1 do
+    for j = 1, #table_contents[i], 1 do
       line = line .. table_contents[i][j] .. corner_char
     end
     table_contents[i] = line
   end
   return table_contents
-end
-
-local function judge_markdown_table(table_contents)
-  if #table_contents < 2 then
-    return false
-  end
-  for i = 2, #table_contents, 1 do
-    if #table_contents[i - 1] ~= #table_contents[i] then
-      return false
-    end
-  end
-  return true
 end
 
 local function markdown_table_format()
@@ -99,17 +87,30 @@ local function markdown_table_format()
     table.insert(table_contents, table_cells)
   end
 
-  if judge_markdown_table(table_contents) then
-    local width = markdon_table_cells_width_get(table_contents)
-    table_contents = update_cell_contents(table_contents, width)
-    table_contents = cells_to_table(table_contents)
+  local width = markdon_table_cells_width_get(table_contents)
+  table_contents = update_cell_contents(table_contents, width)
+  table_contents = cells_to_table(table_contents)
 
-    vim.api.nvim_buf_set_lines(0, table_start_line - 1, table_end_line, true, table_contents)
-  end
+  vim.api.nvim_buf_set_lines(0, table_start_line - 1, table_end_line, true, table_contents)
 end
 
 vim.api.nvim_create_autocmd('InsertLeave', {
+  pattern = "*.md",
   callback = function()
     markdown_table_format()
   end
 })
+vim.api.nvim_create_autocmd('TextChangedI', {
+  pattern = "*.md",
+  callback = function()
+    local current_line = vim.api.nvim_get_current_line()
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    local char = current_line:sub(cursor_pos[2], cursor_pos[2])
+    if char == '|' then
+      markdown_table_format()
+      local length = #vim.api.nvim_get_current_line()
+      vim.api.nvim_win_set_cursor(0, { cursor_pos[1], length })
+    end
+  end
+})
+
