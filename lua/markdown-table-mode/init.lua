@@ -96,7 +96,7 @@ end
 
 local opt = {
   filetype = {
-    'markdown',
+    '*.md',
   }
 }
 
