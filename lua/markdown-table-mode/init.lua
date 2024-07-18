@@ -94,23 +94,35 @@ local function markdown_table_format()
   vim.api.nvim_buf_set_lines(0, table_start_line - 1, table_end_line, true, table_contents)
 end
 
-vim.api.nvim_create_autocmd('InsertLeave', {
-  pattern = "*.md",
-  callback = function()
-    markdown_table_format()
-  end
-})
-vim.api.nvim_create_autocmd('TextChangedI', {
-  pattern = "*.md",
-  callback = function()
-    local current_line = vim.api.nvim_get_current_line()
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    local char = current_line:sub(cursor_pos[2], cursor_pos[2])
-    if char == '|' then
-      markdown_table_format()
-      local length = #vim.api.nvim_get_current_line()
-      vim.api.nvim_win_set_cursor(0, { cursor_pos[1], length })
-    end
-  end
-})
+local opt = {
+  filetype = {
+    'markdown',
+  }
+}
 
+local function setup(opts)
+  opt = vim.tbl_extend('force', opt, opts or {})
+  vim.api.nvim_create_autocmd('InsertLeave', {
+    pattern = opt.filetype,
+    callback = function()
+      markdown_table_format()
+    end
+  })
+  vim.api.nvim_create_autocmd('TextChangedI', {
+    pattern = opt.filetype,
+    callback = function()
+      local current_line = vim.api.nvim_get_current_line()
+      local cursor_pos = vim.api.nvim_win_get_cursor(0)
+      local char = current_line:sub(cursor_pos[2], cursor_pos[2])
+      if char == '|' then
+        markdown_table_format()
+        local length = #vim.api.nvim_get_current_line()
+        vim.api.nvim_win_set_cursor(0, { cursor_pos[1], length })
+      end
+    end
+  })
+end
+
+return {
+  setup = setup
+}
