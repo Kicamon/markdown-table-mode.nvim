@@ -21,7 +21,7 @@ defualt config
 ```lua
 require('markdown-table-mode').setup({
     filetype = {
-        'markdown'
+        '*.md'
     }
 })
 ```
