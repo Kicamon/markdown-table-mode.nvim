@@ -34,6 +34,18 @@ local function get_markdown_table_cells_width(table_contents)
   return width
 end
 
+local table_line_char = {
+  { ':', ':' },
+  { ':', '-' },
+  { '-', ':' },
+}
+
+local table_line_char_insert = {
+  { ':', ':' },
+  { ':', ' ' },
+  { ' ', ':' },
+}
+
 local function update_cell_contents(table_contents, width)
   local function add_space(cell, num)
     cell = ' ' .. cell .. ' '
@@ -41,10 +53,38 @@ local function update_cell_contents(table_contents, width)
     return cell
   end
 
+  local function get_chars(cell)
+    local char_left = string.sub(cell, 1, 1)
+    local char_right = string.sub(cell, #cell)
+    return { char_left, char_right }
+  end
+
+  local function get_table_line_char_id(chars)
+    for i, v in ipairs(table_line_char) do
+      if chars[1] == v[1] and chars[2] == v[2] then
+        return i
+      end
+    end
+    for i, v in ipairs(table_line_char_insert) do
+      if chars[1] == v[1] and chars[2] == v[2] then
+        return i
+      end
+    end
+    return 0
+  end
+
+  local function add_chars(cell, chars)
+    cell = chars[1] .. cell .. chars[2]
+    return cell
+  end
+
   for i, cells in ipairs(table_contents) do
     if i == 2 then
       for j, _ in ipairs(cells) do
-        table_contents[i][j] = string.rep('-', (width[j] + 2))
+        local chars = get_chars(table_contents[i][j])
+        local id    = get_table_line_char_id(chars)
+        table_contents[i][j] = string.rep('-', width[j])
+        table_contents[i][j] = add_chars(table_contents[i][j], id ~= 0 and table_line_char[id] or { '-', '-' })
       end
     else
       for j, cell in ipairs(cells) do
@@ -77,17 +117,24 @@ local function format_markdown_table()
   local table_start_line, table_end_line = find_markdown_table(-1), find_markdown_table(1)
   local table_contents = {}
 
-  for lnum = table_start_line, table_end_line, 1 do
-    local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, true)[1]
+  local function table_to_cells(line, lnum)
     local table_cells = {}
     for cell in line:gmatch("([^|]+)%|") do
-      cell = cell:match("^%s*(.-)%s*$")
+      if lnum ~= 1 then
+        cell = cell:match("^%s*(.-)%s*$")
+      end
       table.insert(table_cells, cell)
     end
     table.insert(table_contents, table_cells)
   end
 
-  local width = get_markdown_table_cells_width(table_contents)
+  for lnum = table_start_line, table_end_line, 1 do
+    local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, true)[1]
+    table_to_cells(line, lnum - table_start_line)
+  end
+
+  local width = markdown_table_cells_width_get(table_contents)
+  
   table_contents = update_cell_contents(table_contents, width)
   table_contents = cells_to_table(table_contents)
 
