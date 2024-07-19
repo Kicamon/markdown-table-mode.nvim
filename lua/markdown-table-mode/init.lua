@@ -81,8 +81,8 @@ local function update_cell_contents(table_contents, width)
   for i, cells in ipairs(table_contents) do
     if i == 2 then
       for j, _ in ipairs(cells) do
-        local chars          = get_chars(table_contents[i][j])
-        local id             = get_table_line_char_id(chars)
+        local chars = get_chars(table_contents[i][j])
+        local id    = get_table_line_char_id(chars)
         table_contents[i][j] = string.rep('-', width[j])
         table_contents[i][j] = add_chars(table_contents[i][j], id ~= 0 and table_line_char[id] or { '-', '-' })
       end
@@ -117,14 +117,20 @@ local function markdown_table_format()
   local table_start_line, table_end_line = fine_markdown_table(-1), fine_markdown_table(1)
   local table_contents = {}
 
-  for lnum = table_start_line, table_end_line, 1 do
-    local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, true)[1]
+  local function table_to_cells(line, lnum)
     local table_cells = {}
     for cell in line:gmatch("([^|]+)%|") do
-      cell = cell:match("^%s*(.-)%s*$")
+      if lnum ~= 1 then
+        cell = cell:match("^%s*(.-)%s*$")
+      end
       table.insert(table_cells, cell)
     end
     table.insert(table_contents, table_cells)
+  end
+
+  for lnum = table_start_line, table_end_line, 1 do
+    local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, true)[1]
+    table_to_cells(line, lnum - table_start_line)
   end
 
   local width = markdon_table_cells_width_get(table_contents)
