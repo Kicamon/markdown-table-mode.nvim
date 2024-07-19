@@ -34,6 +34,18 @@ local function markdon_table_cells_width_get(table_contents)
   return width
 end
 
+local table_line_char = {
+  { ':', ':' },
+  { ':', '-' },
+  { '-', ':' },
+}
+
+local table_line_char_insert = {
+  { ':', ':' },
+  { ':', ' ' },
+  { ' ', ':' },
+}
+
 local function update_cell_contents(table_contents, width)
   local function add_space(cell, num)
     cell = ' ' .. cell .. ' '
@@ -41,10 +53,38 @@ local function update_cell_contents(table_contents, width)
     return cell
   end
 
+  local function get_chars(cell)
+    local char_left = string.sub(cell, 1, 1)
+    local char_right = string.sub(cell, #cell)
+    return { char_left, char_right }
+  end
+
+  local function get_table_line_char_id(chars)
+    for i, v in ipairs(table_line_char) do
+      if chars[1] == v[1] and chars[2] == v[2] then
+        return i
+      end
+    end
+    for i, v in ipairs(table_line_char_insert) do
+      if chars[1] == v[1] and chars[2] == v[2] then
+        return i
+      end
+    end
+    return 0
+  end
+
+  local function add_chars(cell, chars)
+    cell = chars[1] .. cell .. chars[2]
+    return cell
+  end
+
   for i, cells in ipairs(table_contents) do
     if i == 2 then
       for j, _ in ipairs(cells) do
-        table_contents[i][j] = string.rep('-', (width[j] + 2))
+        local chars          = get_chars(table_contents[i][j])
+        local id             = get_table_line_char_id(chars)
+        table_contents[i][j] = string.rep('-', width[j])
+        table_contents[i][j] = add_chars(table_contents[i][j], id ~= 0 and table_line_char[id] or { '-', '-' })
       end
     else
       for j, cell in ipairs(cells) do
