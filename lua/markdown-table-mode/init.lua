@@ -1,4 +1,4 @@
-local function check_markdonw_table(line_number)
+local function check_markdown_table(line_number)
   if not line_number then
     line_number = vim.fn.line('.')
   end
@@ -6,11 +6,11 @@ local function check_markdonw_table(line_number)
   return string.match(line, "^|.*|$")
 end
 
-local function fine_markdown_table(range)
+local function find_markdown_table(range)
   local cursor_line, end_line = vim.fn.line('.'), range == -1 and 1 or vim.fn.line('$')
 
   for l = cursor_line, end_line, range do
-    if not check_markdonw_table(l) then
+    if not check_markdown_table(l) then
       return l - range
     end
     if (range == -1 and l == 1) or (range == 1 and l == vim.fn.line('$')) then
@@ -19,7 +19,7 @@ local function fine_markdown_table(range)
   end
 end
 
-local function markdon_table_cells_width_get(table_contents)
+local function get_markdown_table_cells_width(table_contents)
   local width = {}
   for _ = 1, #table_contents[1], 1 do
     table.insert(width, 0)
@@ -48,8 +48,8 @@ local function update_cell_contents(table_contents, width)
       end
     else
       for j, cell in ipairs(cells) do
-        local charnge_length = width[j] - vim.fn.strdisplaywidth(cell)
-        table_contents[i][j] = add_space(cell, charnge_length)
+        local change_length = width[j] - vim.fn.strdisplaywidth(cell)
+        table_contents[i][j] = add_space(cell, change_length)
       end
     end
   end
@@ -69,12 +69,12 @@ local function cells_to_table(table_contents)
   return table_contents
 end
 
-local function markdown_table_format()
-  if not check_markdonw_table() then
+local function format_markdown_table()
+  if not check_markdown_table() then
     return
   end
 
-  local table_start_line, table_end_line = fine_markdown_table(-1), fine_markdown_table(1)
+  local table_start_line, table_end_line = find_markdown_table(-1), find_markdown_table(1)
   local table_contents = {}
 
   for lnum = table_start_line, table_end_line, 1 do
@@ -87,7 +87,7 @@ local function markdown_table_format()
     table.insert(table_contents, table_cells)
   end
 
-  local width = markdon_table_cells_width_get(table_contents)
+  local width = get_markdown_table_cells_width(table_contents)
   table_contents = update_cell_contents(table_contents, width)
   table_contents = cells_to_table(table_contents)
 
@@ -105,7 +105,7 @@ local function setup(opts)
   vim.api.nvim_create_autocmd('InsertLeave', {
     pattern = opt.filetype,
     callback = function()
-      markdown_table_format()
+      format_markdown_table()
     end
   })
   vim.api.nvim_create_autocmd('TextChangedI', {
@@ -115,7 +115,7 @@ local function setup(opts)
       local cursor_pos = vim.api.nvim_win_get_cursor(0)
       local char = current_line:sub(cursor_pos[2], cursor_pos[2])
       if char == '|' then
-        markdown_table_format()
+        format_markdown_table()
         local length = #vim.api.nvim_get_current_line()
         vim.api.nvim_win_set_cursor(0, { cursor_pos[1], length })
       end
