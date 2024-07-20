@@ -133,7 +133,7 @@ local function format_markdown_table()
     table_to_cells(line, lnum - table_start_line)
   end
 
-  local width = markdown_table_cells_width_get(table_contents)
+  local width = get_markdown_table_cells_width(table_contents)
   
   table_contents = update_cell_contents(table_contents, width)
   table_contents = cells_to_table(table_contents)
