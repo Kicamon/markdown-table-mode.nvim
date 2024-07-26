@@ -23,5 +23,9 @@ require('markdown-table-mode').setup({
     filetype = {
         '*.md'
     }
+    options = {
+        insert = true,
+        insert_leave = true,
+    }
 })
 ```

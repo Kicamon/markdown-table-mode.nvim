@@ -81,8 +81,8 @@ local function update_cell_contents(table_contents, width)
   for i, cells in ipairs(table_contents) do
     if i == 2 then
       for j, _ in ipairs(cells) do
-        local chars = get_chars(table_contents[i][j])
-        local id    = get_table_line_char_id(chars)
+        local chars          = get_chars(table_contents[i][j])
+        local id             = get_table_line_char_id(chars)
         table_contents[i][j] = string.rep('-', width[j])
         table_contents[i][j] = add_chars(table_contents[i][j], id ~= 0 and table_line_char[id] or { '-', '-' })
       end
@@ -134,7 +134,7 @@ local function format_markdown_table()
   end
 
   local width = get_markdown_table_cells_width(table_contents)
-  
+
   table_contents = update_cell_contents(table_contents, width)
   table_contents = cells_to_table(table_contents)
 
@@ -144,6 +144,10 @@ end
 local opt = {
   filetype = {
     '*.md',
+  },
+  options = {
+    insert = true,
+    insert_leave = true,
   }
 }
 
@@ -152,19 +156,23 @@ local function setup(opts)
   vim.api.nvim_create_autocmd('InsertLeave', {
     pattern = opt.filetype,
     callback = function()
-      format_markdown_table()
+      if opt.options.insert_leave then
+        format_markdown_table()
+      end
     end
   })
   vim.api.nvim_create_autocmd('TextChangedI', {
     pattern = opt.filetype,
     callback = function()
-      local current_line = vim.api.nvim_get_current_line()
-      local cursor_pos = vim.api.nvim_win_get_cursor(0)
-      local char = current_line:sub(cursor_pos[2], cursor_pos[2])
-      if char == '|' then
-        format_markdown_table()
-        local length = #vim.api.nvim_get_current_line()
-        vim.api.nvim_win_set_cursor(0, { cursor_pos[1], length })
+      if opt.options.insert then
+        local current_line = vim.api.nvim_get_current_line()
+        local cursor_pos = vim.api.nvim_win_get_cursor(0)
+        local char = current_line:sub(cursor_pos[2], cursor_pos[2])
+        if char == '|' then
+          format_markdown_table()
+          local length = #vim.api.nvim_get_current_line()
+          vim.api.nvim_win_set_cursor(0, { cursor_pos[1], length })
+        end
       end
     end
   })
