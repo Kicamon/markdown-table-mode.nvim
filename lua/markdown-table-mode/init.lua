@@ -1,11 +1,9 @@
-local mtm_group = vim.api.nvim_create_augroup('mtm', {})
-
 ---Check if the line_number is a markdown table
 ---@param line_number integer
 ---@return integer
 local function check_markdown_table(line_number)
   local line = vim.api.nvim_buf_get_lines(0, line_number - 1, line_number, true)[1]
-  return string.match(line, "^|.*|$")
+  return string.match(line, '^|.*|$')
 end
 
 ---Find the starting or ending line of the markdown table
@@ -74,7 +72,7 @@ local function update_cell_contents(table_contents, width)
   end
 
   local function get_table_line_char_id(chars) -- get chars at second line's left and right
-    for i, v in ipairs(table_line_char) do     -- leave insert
+    for i, v in ipairs(table_line_char) do -- leave insert
       if chars[1] == v[1] and chars[2] == v[2] then
         return i
       end
@@ -95,10 +93,11 @@ local function update_cell_contents(table_contents, width)
   for i, cells in ipairs(table_contents) do -- traversal markdown table lines and update
     if i == 2 then
       for j, _ in ipairs(cells) do
-        local chars          = get_chars(table_contents[i][j])
-        local id             = get_table_line_char_id(chars)
+        local chars = get_chars(table_contents[i][j])
+        local id = get_table_line_char_id(chars)
         table_contents[i][j] = string.rep('-', width[j])
-        table_contents[i][j] = add_chars(table_contents[i][j], id ~= 0 and table_line_char[id] or { '-', '-' })
+        table_contents[i][j] =
+          add_chars(table_contents[i][j], id ~= 0 and table_line_char[id] or { '-', '-' })
       end
     else
       for j, cell in ipairs(cells) do
@@ -126,51 +125,52 @@ local function cells_to_table(table_contents)
   return table_contents
 end
 
-local fmt = coroutine.create(function()
-  while true do
-    if not check_markdown_table(vim.fn.line('.')) then -- check if the curso is in markdown table
-      return
-    end
-
-    -- find the staring line and ending line of markdown table
-    local table_start_line, table_end_line = find_markdown_table(-1), find_markdown_table(1)
-    local table_contents = {}
-
-    ---change table to cells
-    ---@param line string
-    ---@param lnum integer
-    local function table_to_cells(line, lnum)
-      local table_cells = {}
-      for cell in line:gmatch("([^|]+)%|") do
-        if lnum ~= 1 then
-          cell = cell:match("^%s*(.-)%s*$")
-        end
-        table.insert(table_cells, cell)
-      end
-      table.insert(table_contents, table_cells)
-    end
-
-    -- traversal markdown table lines
-    for lnum = table_start_line, table_end_line, 1 do
-      local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, true)[1]
-      table_to_cells(line, lnum - table_start_line)
-    end
-
-    local width = get_markdown_table_cells_width(table_contents)
-
-    table_contents = update_cell_contents(table_contents, width)
-    table_contents = cells_to_table(table_contents)
-
-    vim.api.nvim_buf_set_lines(0, table_start_line - 1, table_end_line, true, table_contents)
-    coroutine.yield()
-  end
-end)
-
 local function format_markdown_table()
-  vim.schedule(function()
-    coroutine.resume(fmt)
-  end)
+  if not check_markdown_table(vim.fn.line('.')) then -- check if the curso is in markdown table
+    return
+  end
+
+  -- find the staring line and ending line of markdown table
+  local table_start_line, table_end_line = find_markdown_table(-1), find_markdown_table(1)
+  local table_contents = {}
+
+  ---change table to cells
+  ---@param line string
+  ---@param lnum integer
+  local function table_to_cells(line, lnum)
+    local table_cells = {}
+    for cell in line:gmatch('([^|]+)%|') do
+      if lnum ~= 1 then
+        cell = cell:match('^%s*(.-)%s*$')
+      end
+      table.insert(table_cells, cell)
+    end
+    table.insert(table_contents, table_cells)
+  end
+
+  -- traversal markdown table lines
+  for lnum = table_start_line, table_end_line, 1 do
+    local line = vim.api.nvim_buf_get_lines(0, lnum - 1, lnum, true)[1]
+    table_to_cells(line, lnum - table_start_line)
+  end
+
+  local width = get_markdown_table_cells_width(table_contents)
+
+  table_contents = update_cell_contents(table_contents, width)
+  table_contents = cells_to_table(table_contents)
+
+  vim.api.nvim_buf_set_lines(0, table_start_line - 1, table_end_line, true, table_contents)
 end
+
+local opt = {
+  filetype = {
+    '*.md',
+  },
+  options = {
+    insert = true, -- when typeing "|"
+    insert_leave = true, -- when leaveing insert
+  },
+}
 
 local function format_markdown_table_lines()
   local current_line = vim.api.nvim_get_current_line()
@@ -183,38 +183,26 @@ local function format_markdown_table_lines()
   end
 end
 
-local opt = {
-  filetype = {
-    '*.md',
-  },
-  options = {
-    insert = true,       -- when typeing "|"
-    insert_leave = true, -- when leaveing insert
-  }
-}
-
 local function setup(opts)
   opt = vim.tbl_extend('force', opt, opts or {})
   vim.api.nvim_create_autocmd('InsertLeave', {
-    group = mtm_group,
     pattern = opt.filetype,
     callback = function()
       if opt.options.insert_leave then
         format_markdown_table()
       end
-    end
+    end,
   })
   vim.api.nvim_create_autocmd('TextChangedI', {
-    group = mtm_group,
     pattern = opt.filetype,
     callback = function()
       if opt.options.insert then
         format_markdown_table_lines()
       end
-    end
+    end,
   })
 end
 
 return {
-  setup = setup
+  setup = setup,
 }
