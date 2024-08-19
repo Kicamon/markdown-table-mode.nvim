@@ -16,16 +16,24 @@ format markdown table under cursor when you leave insert mode or input `|`
 }
 ```
 
+**vim-plug**
+
+```vim script
+Plug 'Kicamon/markdown-table-mode.nvim'
+lua require('markdown-table-mode').setup()
+```
+
+
 ### Configuration
 defualt config
 ```lua
 require('markdown-table-mode').setup({
-    filetype = {
-        '*.md'
-    }
-    options = {
-        insert = true,
-        insert_leave = true,
-    }
+  filetype = {
+    '*.md',
+  },
+  options = {
+    insert = true, -- when typeing "|"
+    insert_leave = true, -- when leaveing insert
+  },
 })
 ```
