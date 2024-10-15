@@ -1,4 +1,4 @@
-local api = vim.api
+local api, fn = vim.api, vim.fn
 local group = api.nvim_create_augroup('MTMgroup', {})
 
 local table_line_char = {
@@ -25,13 +25,13 @@ end
 ---@param range integer 1 or -1
 ---@return integer startline|endline
 local function find_markdown_table(range)
-  local cursor_line, end_line = vim.fn.line('.'), range == -1 and 1 or vim.fn.line('$')
+  local cursor_line, end_line = fn.line('.'), range == -1 and 1 or fn.line('$')
 
   for l = cursor_line, end_line, range do
     if not check_markdown_table(l) then
       return l - range
     end
-    if (range == -1 and l == 1) or (range == 1 and l == vim.fn.line('$')) then --- if in the first line or last line
+    if (range == -1 and l == 1) or (range == 1 and l == fn.line('$')) then --- if in the first line or last line
       return l
     end
   end
@@ -54,7 +54,7 @@ local function get_markdown_table_cells_width(table_contents)
     end
 
     for _, cell in ipairs(table_contents[i]) do
-      width[_] = math.max(width[_], cell and vim.fn.strdisplaywidth(cell) or 0)
+      width[_] = math.max(width[_], cell and fn.strdisplaywidth(cell) or 0)
     end
 
     ::continue::
@@ -123,7 +123,7 @@ local function update_cell_contents(table_contents, width)
       end
     else
       for j, cell in ipairs(cells) do
-        local change_length = width[j] - vim.fn.strdisplaywidth(cell)
+        local change_length = width[j] - fn.strdisplaywidth(cell)
         table_contents[i][j] = add_space(cell, change_length)
       end
     end
@@ -147,14 +147,29 @@ local function cells_to_table(table_contents)
   return table_contents
 end
 
+local function add_new_col(table_start_line, table_end_line, current_line, cursor_pos)
+  if fn.line('.') ~= table_start_line or cursor_pos[2] ~= #current_line then
+    return
+  end
+
+  local lines = api.nvim_buf_get_lines(0, table_start_line, table_end_line, true)
+  lines[1] = lines[1] .. '--|'
+  for i = 2, #lines, 1 do
+    lines[i] = lines[i] .. '  |'
+  end
+
+  api.nvim_buf_set_lines(0, table_start_line, table_end_line, true, lines)
+end
+
 ---format markdown table under cursor
-local function format_markdown_table()
-  if not check_markdown_table(vim.fn.line('.')) then -- check if the curso is in markdown table
+local function format_markdown_table(table_start_line, table_end_line)
+  if not check_markdown_table(fn.line('.')) then -- check if the curso is in markdown table
     return
   end
 
   -- find the staring line and ending line of markdown table
-  local table_start_line, table_end_line = find_markdown_table(-1), find_markdown_table(1)
+  table_start_line = table_start_line and table_start_line or find_markdown_table(-1)
+  table_end_line = table_end_line and table_end_line or find_markdown_table(1)
   local table_contents = {}
 
   ---change table to cells
@@ -191,7 +206,9 @@ local function format_markdown_table_lines()
   local cursor_pos = api.nvim_win_get_cursor(0)
   local char = current_line:sub(cursor_pos[2], cursor_pos[2])
   if char == '|' and cursor_pos[2] ~= 1 then
-    format_markdown_table()
+    local table_start_line, table_end_line = find_markdown_table(-1), find_markdown_table(1)
+    add_new_col(table_start_line, table_end_line, current_line, cursor_pos)
+    format_markdown_table(table_start_line, table_end_line)
     local length = #api.nvim_get_current_line()
     api.nvim_win_set_cursor(0, { cursor_pos[1], length })
   end
