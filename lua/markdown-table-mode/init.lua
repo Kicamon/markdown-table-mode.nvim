@@ -148,7 +148,11 @@ local function cells_to_table(table_contents)
 end
 
 local function add_new_col(table_start_line, table_end_line, current_line, cursor_pos)
-  if fn.line('.') ~= table_start_line or cursor_pos[2] ~= #current_line then
+  if
+    table_start_line == table_end_line
+    or fn.line('.') ~= table_start_line
+    or cursor_pos[2] ~= #current_line
+  then
     return
   end
 
