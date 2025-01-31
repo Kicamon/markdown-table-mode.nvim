@@ -185,7 +185,7 @@ local function format_markdown_table_lines()
 end
 
 local function setup(opts)
-  opt = vim.tbl_extend('force', opt, opts or {})
+  opt = vim.tbl_deep_extend('force', opt, opts or {})
   api.nvim_create_user_command('Mtm', function()
     mtm_startup = not mtm_startup
   end, {})
