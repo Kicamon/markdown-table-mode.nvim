@@ -24,7 +24,7 @@ lua require('markdown-table-mode').setup()
 ```
 
 ### Usage
-Type `Mtm` toggle markdown table mode
+Run the `:Mtm` command to toggle markdown table mode.
 
 ### Configuration
 default config
