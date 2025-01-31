@@ -2,10 +2,10 @@ local api, fn = vim.api, vim.fn
 local group = api.nvim_create_augroup('MTMgroup', {})
 local mtm_startup = false
 
-local aligment = {
+local alignment = {
   ['default'] = '--|',
   ['left'] = ':-|',
-  ['cneter'] = '::|',
+  ['center'] = '::|',
   ['right'] = '-:|',
 }
 
@@ -17,7 +17,7 @@ local opt = {
     insert = true, -- when typeing "|"
     insert_leave = true, -- when leaveing insert
     pad_separator_line = false, -- add space in separator line
-    alig_style = 'default', -- default, left, center, right
+    align_style = 'default', -- default, left, center, right
   },
 }
 
@@ -136,7 +136,7 @@ local function add_new_col(table_infos)
   if #table_infos.current_table == 1 then
     table.insert(table_infos.current_table, '|')
   end
-  table_infos.current_table[2] = table_infos.current_table[2] .. aligment[opt.options.alig_style]
+  table_infos.current_table[2] = table_infos.current_table[2] .. alignment[opt.options.align_style]
   for i = 3, #table_infos.current_table do
     table_infos.current_table[i] = table_infos.current_table[i] .. '  |'
   end
