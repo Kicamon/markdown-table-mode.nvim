@@ -1,5 +1,13 @@
 local api, fn = vim.api, vim.fn
 local group = api.nvim_create_augroup('MTMgroup', {})
+local mtm_startup = false
+
+local aligment = {
+  ['default'] = '--|',
+  ['left'] = ':-|',
+  ['cneter'] = '::|',
+  ['right'] = '-:|',
+}
 
 local opt = {
   filetype = {
@@ -8,7 +16,8 @@ local opt = {
   options = {
     insert = true, -- when typeing "|"
     insert_leave = true, -- when leaveing insert
-    pad_separator_line = false,
+    pad_separator_line = false, -- add space in separator line
+    alig_style = 'default', -- default, left, center, right
   },
 }
 
@@ -31,8 +40,6 @@ local function format_cell(cell, width)
   cell = cell .. string.rep(' ', width - fn.strdisplaywidth(cell) + 2)
   return cell
 end
-
---------------------------------
 
 local function find_table_range(cursor_pos, range)
   local start_line_number, end_line_number = cursor_pos[1], range == -1 and 1 or fn.line('$')
@@ -96,17 +103,15 @@ end
 local function format_separator_line(cells, width)
   local line, bias = '|', opt.options.pad_separator_line
   for i = 1, #cells do
-    local left_char = cells[i]:sub(1, 1) == ' ' and '-' or cells[i]:sub(1, 1)
-    local right_char = cells[i]:sub(#cells[i], #cells[i]) == ' ' and '-'
-      or cells[i]:sub(#cells[i], #cells[i])
+    local left_char = cells[i]:sub(1, 1)
+    local right_char = cells[i]:sub(#cells[i])
     local num = width[i]
     if bias then
       num = num - 2
       left_char = ' ' .. left_char
       right_char = right_char .. ' '
     end
-    local temp = left_char .. string.rep('-', num) .. right_char
-    line = line .. temp .. '|'
+    line = line .. left_char .. string.rep('-', num) .. right_char .. '|'
   end
   return line
 end
@@ -127,15 +132,11 @@ local function cells_to_table(cells, max_cells_width)
   return lines
 end
 
-local function add_new_col()
-  if not check_line_is_table(fn.line('.')) then
-    return
+local function add_new_col(table_infos)
+  if #table_infos.current_table == 1 then
+    table.insert(table_infos.current_table, '|')
   end
-  local table_infos = get_table_infos()
-  if fn.line('.') ~= table_infos.table_start_line_number then
-    return
-  end
-  table_infos.current_table[2] = table_infos.current_table[2] .. '--|'
+  table_infos.current_table[2] = table_infos.current_table[2] .. aligment[opt.options.alig_style]
   for i = 3, #table_infos.current_table do
     table_infos.current_table[i] = table_infos.current_table[i] .. '  |'
   end
@@ -164,11 +165,19 @@ local function format_markdown_table()
 end
 
 local function format_markdown_table_lines()
+  if not check_line_is_table(fn.line('.')) then
+    return
+  end
+
   local current_line = api.nvim_get_current_line()
   local cursor_pos = api.nvim_win_get_cursor(0)
   local char = current_line:sub(cursor_pos[2], cursor_pos[2])
+
   if char == '|' and cursor_pos[2] ~= 1 then
-    add_new_col()
+    local table_infos = get_table_infos()
+    if cursor_pos[1] == table_infos.table_start_line_number then
+      add_new_col(table_infos)
+    end
     format_markdown_table()
     local length = #api.nvim_get_current_line()
     api.nvim_win_set_cursor(0, { cursor_pos[1], length })
@@ -177,7 +186,10 @@ end
 
 local function setup(opts)
   opt = vim.tbl_extend('force', opt, opts or {})
-  if opt.options.insert_leave then
+  api.nvim_create_user_command('Mtm', function()
+    mtm_startup = not mtm_startup
+  end, {})
+  if opt.options.insert_leave and mtm_startup then
     api.nvim_create_autocmd('InsertLeave', {
       group = group,
       pattern = opt.filetype,
@@ -186,7 +198,7 @@ local function setup(opts)
       end,
     })
   end
-  if opt.options.insert then
+  if opt.options.insert and mtm_startup then
     api.nvim_create_autocmd('TextChangedI', {
       group = group,
       pattern = opt.filetype,

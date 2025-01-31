@@ -23,6 +23,8 @@ Plug 'Kicamon/markdown-table-mode.nvim'
 lua require('markdown-table-mode').setup()
 ```
 
+### Usage
+Type `Mtm` toggle markdown table mode
 
 ### Configuration
 defualt config
@@ -35,6 +37,7 @@ require('markdown-table-mode').setup({
     insert = true, -- when typeing "|"
     insert_leave = true, -- when leaveing insert
     pad_separator_line = false, -- add space in separator line
+    alig_style = 'default', -- default, left, center, right
   },
 })
 ```
