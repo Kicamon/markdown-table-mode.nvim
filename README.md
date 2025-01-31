@@ -1,5 +1,5 @@
 # markdown-table-mode.nvim
-format markdown table under cursor when you leave insert mode or input `|`
+Formats markdown table under cursor when you leave insert mode or input `|`.
 
 ### Screenshot
 ![Screenshot](./Screenshot.gif)
@@ -27,15 +27,15 @@ lua require('markdown-table-mode').setup()
 Type `Mtm` toggle markdown table mode
 
 ### Configuration
-defualt config
+default config
 ```lua
 require('markdown-table-mode').setup({
   filetype = {
     '*.md',
   },
   options = {
-    insert = true, -- when typeing "|"
-    insert_leave = true, -- when leaveing insert
+    insert = true, -- when typing "|"
+    insert_leave = true, -- when leaving insert
     pad_separator_line = false, -- add space in separator line
     alig_style = 'default', -- default, left, center, right
   },
