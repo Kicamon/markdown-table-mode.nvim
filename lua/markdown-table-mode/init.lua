@@ -188,22 +188,27 @@ local function setup(opts)
   opt = vim.tbl_deep_extend('force', opt, opts or {})
   api.nvim_create_user_command('Mtm', function()
     mtm_startup = not mtm_startup
+    vim.notify("Markdown table mode " .. (mtm_startup and "on" or "off"))
   end, {})
-  if opt.options.insert_leave and mtm_startup then
+  if opt.options.insert_leave then
     api.nvim_create_autocmd('InsertLeave', {
       group = group,
       pattern = opt.filetype,
       callback = function()
-        format_markdown_table()
+        if mtm_startup then
+          format_markdown_table()
+        end
       end,
     })
   end
-  if opt.options.insert and mtm_startup then
+  if opt.options.insert then
     api.nvim_create_autocmd('TextChangedI', {
       group = group,
       pattern = opt.filetype,
       callback = function()
-        format_markdown_table_lines()
+        if mtm_startup then
+          format_markdown_table_lines()
+        end
       end,
     })
   end
