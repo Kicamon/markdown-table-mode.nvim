@@ -6,7 +6,6 @@ ffi.cdef([[
   typedef int32_t linenr_T;
   char *ml_get(linenr_T lnum);
 ]])
-local ml_get = ffi.C.ml_get
 
 local alignment = {
   ['default'] = '--|',
@@ -27,8 +26,19 @@ local opt = {
   },
 }
 
+local function table_insert(tab, cell, num)
+  for _ = 1, num do
+    table.insert(tab, cell)
+  end
+  return tab
+end
+
+local function add_char_inline(line, char, pos)
+  return line:sub(1, pos) .. char .. line:sub(pos + 1)
+end
+
 local function check_line_is_table(line_number)
-  local line = ffi.string(ml_get(line_number))
+  local line = ffi.string(ffi.C.ml_get(line_number))
   return string.match(line, '^|.*|$')
 end
 
@@ -81,6 +91,9 @@ local function get_max_cells_width(cells)
       goto continue
     end
 
+    if #cells[i] > #width then
+      table_insert(width, 0, #cells[i] - #width)
+    end
     for _, cell in ipairs(cells[i]) do
       width[_] = math.max(width[_], cell and fn.strdisplaywidth(cell) or 0)
     end
@@ -142,10 +155,15 @@ local function add_new_col(table_infos)
   if #table_infos.current_table == 1 then
     table.insert(table_infos.current_table, '|')
   end
-  table_infos.current_table[2] = table_infos.current_table[2] .. alignment[opt.options.align_style]
-  for i = 3, #table_infos.current_table do
-    table_infos.current_table[i] = table_infos.current_table[i] .. '  |'
+
+  if table_infos.cells[2] and #table_infos.cells[2] < #table_infos.cells[1] then
+    table_infos.current_table[2] = table_infos.current_table[2]
+      .. alignment[opt.options.align_style]
+    for i = 3, #table_infos.current_table do
+      table_infos.current_table[i] = table_infos.current_table[i] .. '  |'
+    end
   end
+
   api.nvim_buf_set_lines(
     0,
     table_infos.table_start_line_number - 1,
@@ -171,53 +189,79 @@ local function format_markdown_table()
 end
 
 local function format_markdown_table_lines()
-  if not check_line_is_table(fn.line('.')) then
-    return
-  end
-
   local current_line = api.nvim_get_current_line()
   local cursor_pos = api.nvim_win_get_cursor(0)
-  local char = current_line:sub(cursor_pos[2], cursor_pos[2])
+  current_line = add_char_inline(current_line, '|', cursor_pos[2])
+  api.nvim_buf_set_lines(0, cursor_pos[1] - 1, cursor_pos[1], true, { current_line })
 
-  if char == '|' and cursor_pos[2] ~= 1 then
+  if check_line_is_table(fn.line('.')) then
     local table_infos = get_table_infos()
     if cursor_pos[1] == table_infos.table_start_line_number then
       add_new_col(table_infos)
     end
     format_markdown_table()
-    local length = #api.nvim_get_current_line()
-    api.nvim_win_set_cursor(0, { cursor_pos[1], length })
+  end
+
+  local length = string.len(api.nvim_get_current_line())
+  api.nvim_win_set_cursor(0, { cursor_pos[1], length })
+end
+
+local function init()
+  local acid = nil
+  if opt.options.insert_leave then
+    acid = api.nvim_create_autocmd('InsertLeave', {
+      group = group,
+      pattern = opt.filetype,
+      callback = function()
+        format_markdown_table()
+      end,
+    })
+  end
+  if opt.options.insert then
+    vim.keymap.set('i', '|', function()
+      format_markdown_table_lines()
+    end, {})
+  end
+  return acid
+end
+
+local function final(acid)
+  if opt.options.insert_leave and acid then
+    api.nvim_del_autocmd(acid)
+  end
+  if opt.options.insert then
+    vim.keymap.del('i', '|', {})
   end
 end
 
 local function setup(opts)
   opt = vim.tbl_deep_extend('force', opt, opts or {})
+  local acid = nil
   api.nvim_create_user_command('Mtm', function()
     mtm_startup = not mtm_startup
     vim.notify('Markdown table mode ' .. (mtm_startup and 'on' or 'off'))
+    if mtm_startup then
+      acid = init()
+    else
+      final(acid)
+    end
   end, {})
-  if opt.options.insert_leave then
-    api.nvim_create_autocmd('InsertLeave', {
-      group = group,
-      pattern = opt.filetype,
-      callback = function()
-        if mtm_startup then
-          format_markdown_table()
-        end
-      end,
-    })
-  end
-  if opt.options.insert then
-    api.nvim_create_autocmd('TextChangedI', {
-      group = group,
-      pattern = opt.filetype,
-      callback = function()
-        if mtm_startup then
-          format_markdown_table_lines()
-        end
-      end,
-    })
-  end
+  api.nvim_create_autocmd('BufEnter', {
+    pattern = opt.filetype,
+    callback = function()
+      if mtm_startup then
+        acid = init()
+      end
+    end,
+  })
+  api.nvim_create_autocmd('BufLeave', {
+    pattern = opt.filetype,
+    callback = function()
+      if mtm_startup then
+        final(acid)
+      end
+    end,
+  })
 end
 
 return { setup = setup }
