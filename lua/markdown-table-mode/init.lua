@@ -1,6 +1,12 @@
-local api, fn = vim.api, vim.fn
+local api, fn, ffi = vim.api, vim.fn, require('ffi')
 local group = api.nvim_create_augroup('MTMgroup', {})
 local mtm_startup = false
+
+ffi.cdef([[
+  typedef int32_t linenr_T;
+  char *ml_get(linenr_T lnum);
+]])
+local ml_get = ffi.C.ml_get
 
 local alignment = {
   ['default'] = '--|',
@@ -22,7 +28,7 @@ local opt = {
 }
 
 local function check_line_is_table(line_number)
-  local line = api.nvim_buf_get_lines(0, line_number - 1, line_number, true)[1]
+  local line = ffi.string(ml_get(line_number))
   return string.match(line, '^|.*|$')
 end
 
@@ -188,7 +194,7 @@ local function setup(opts)
   opt = vim.tbl_deep_extend('force', opt, opts or {})
   api.nvim_create_user_command('Mtm', function()
     mtm_startup = not mtm_startup
-    vim.notify("Markdown table mode " .. (mtm_startup and "on" or "off"))
+    vim.notify('Markdown table mode ' .. (mtm_startup and 'on' or 'off'))
   end, {})
   if opt.options.insert_leave then
     api.nvim_create_autocmd('InsertLeave', {
