@@ -157,7 +157,7 @@ local function add_new_col(table_infos)
   end
 
   if #table_infos.cells == 1 or #table_infos.cells[2] < #table_infos.cells[1] then
-    table_infos.current_table[2] = table_infos.current_table[2] .. '--|'
+    table_infos.current_table[2] = table_infos.current_table[2] .. alignment[opt.options.align_style]
     for i = 3, #table_infos.current_table do
       table_infos.current_table[i] = table_infos.current_table[i] .. '  |'
     end
