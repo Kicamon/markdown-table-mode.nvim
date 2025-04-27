@@ -124,7 +124,7 @@ local function format_separator_line(cells, width)
   for i = 1, #cells do
     local left_char = cells[i]:sub(1, 1)
     local right_char = cells[i]:sub(#cells[i])
-    local num = width[i]
+    local num = width[i] or 0
     if bias then
       num = num - 2
       left_char = ' ' .. left_char
