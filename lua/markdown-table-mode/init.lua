@@ -263,4 +263,7 @@ local function setup(opts)
   })
 end
 
-return { setup = setup }
+return {
+  setup = setup,
+  format_markdown_table = format_markdown_table,
+}
