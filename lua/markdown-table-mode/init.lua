@@ -44,9 +44,15 @@ end
 
 local function line_to_cells(line)
   local table_cells = {}
+  local cell_buffer = ''
   for cell in line:gmatch('([^|]+)%|') do
-    cell = cell:match('^%s*(.-)%s*$')
-    table.insert(table_cells, cell)
+    if cell:sub(-1) == '\\' then
+      cell_buffer = cell_buffer .. cell .. '|'
+    else
+      cell = (cell_buffer .. cell):match('^%s*(.-)%s*$')
+      table.insert(table_cells, cell)
+      cell_buffer = ''
+    end
   end
   return table_cells
 end
@@ -192,6 +198,11 @@ local function format_markdown_table_lines()
   local cursor_pos = api.nvim_win_get_cursor(0)
   current_line = add_char_inline(current_line, '|', cursor_pos[2])
   api.nvim_buf_set_lines(0, cursor_pos[1] - 1, cursor_pos[1], true, { current_line })
+
+  if current_line:sub(cursor_pos[2], cursor_pos[2]) == '\\' then
+    api.nvim_win_set_cursor(0, {cursor_pos[1], cursor_pos[2] + 1})
+    return
+  end
 
   if check_line_is_table(fn.line('.')) then
     local table_infos = get_table_infos()
